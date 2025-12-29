@@ -4,7 +4,7 @@ from datetime import datetime
 
 def call_claude_api(user_message, conversation_history):
     """
-    Call Claude API for disaster response assistance.
+    Call CHATGPT API for disaster response assistance.
     
     Args:
         user_message: The user's current message
@@ -32,11 +32,12 @@ instructions when dealing with emergency situations."""
 
     try:
         # Prepare the API request
-        url = "https://api.anthropic.com/v1/messages"
+        url = "https://api.openai.com/v1/chat/completions"
+
         
         headers = {
             "Content-Type": "application/json",
-            "x-api-key": "YOUR_API_KEY_HERE"  # User should replace this
+            "x-api-key": "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"  # User should replace this
         }
         
         # Build conversation history
