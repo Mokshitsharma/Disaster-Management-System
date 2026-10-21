@@ -1,10 +1,12 @@
 # 🚨 Disaster Response AI Agent
 
-> **An AI-powered disaster monitoring and emergency response coordination system — combining Claude AI, real-time web search, conversation memory, and interactive mapping into a life-safety platform.**
+> **An AI-powered disaster monitoring and emergency response coordination system — combining Claude, real-time web search, conversation memory and a disaster tracker into one safety assistant.**
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat-square&logo=python)
 ![Streamlit](https://img.shields.io/badge/Streamlit-Latest-red?style=flat-square&logo=streamlit)
 ![Claude AI](https://img.shields.io/badge/Claude-Opus%205.5-orange?style=flat-square)
+
+**Live demo:** [disaster-management-ms.streamlit.app](https://disaster-management-ms.streamlit.app)
 
 ---
 
