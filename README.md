@@ -2,10 +2,9 @@
 
 > **An AI-powered disaster monitoring and emergency response coordination system — combining Claude AI, real-time web search, conversation memory, and interactive mapping into a life-safety platform.**
 
-![Python](https://img.shields.io/badge/Python-3.8+-blue?style=flat-square&logo=python)
+![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat-square&logo=python)
 ![Streamlit](https://img.shields.io/badge/Streamlit-Latest-red?style=flat-square&logo=streamlit)
-![Claude AI](https://img.shields.io/badge/Claude-Sonnet%204-orange?style=flat-square)
-![License](https://img.shields.io/badge/License-MIT-brightgreen?style=flat-square)
+![Claude AI](https://img.shields.io/badge/Claude-Opus%205.5-orange?style=flat-square)
 
 ---
 
@@ -27,13 +26,13 @@ The result: delayed decisions, panic, and preventable harm.
 
 The **Disaster Response AI Agent** is a full-stack AI application that combines:
 
-- **Claude AI (claude-sonnet-4)** — for intelligent, context-aware disaster guidance via natural language
-- **Real-time web search** — automatically searches for current disaster information using the `web_search` tool
+- **Claude (Claude Opus 5.5 by default, through the official Anthropic SDK)** — for context-aware disaster guidance in natural language
+- **Real-time web search** — Anthropic's server-side `web_search` tool looks up current disaster information when a question needs it
 - **Conversation memory** — maintains full session history for multi-turn emergency consultations
 - **Data deduplication** — prevents duplicate disaster entries via a dedicated deduplication engine
 - **Severity classification** — scores disasters as Critical / High / Medium / Low with automated recommendations
-- **Interactive map view** — geographic visualization of active disasters with coordinate tracking
-- **Intelligent fallback system** — 7 disaster-specific response protocols that work even without API access
+- **Disaster tracker view** — tracked incidents (sample data) with type, location, coordinates and severity
+- **Built-in fallback system** — 6 keyword-triggered safety protocols plus a general response, used when no API key is set or the API is unavailable
 
 ---
 
@@ -43,11 +42,11 @@ The **Disaster Response AI Agent** is a full-stack AI application that combines:
 |---|---|
 | **Disaster Types Supported** | Earthquake, Wildfire, Flood, Hurricane, Tornado, Tsunami, and more |
 | **Severity Levels** | Critical (4) / High (3) / Medium (2) / Low (1) — auto-scored |
-| **Fallback Protocols** | 7 built-in keyword-triggered emergency response templates |
+| **Fallback Protocols** | 6 keyword-triggered templates (earthquake, wildfire, flood, emergency kit, evacuation, active disasters) plus a general response |
 | **Emergency Contacts** | 6 countries pre-loaded (USA, Europe, UK, Australia, India, Canada) |
 | **Context Memory** | Up to 100 messages retained per session |
-| **Response Timeout** | 30 seconds with graceful fallback |
-| **API Model** | claude-sonnet-4-20250514 with web_search_20250305 tool |
+| **Response Timeout** | 120 seconds, then the built-in protocols |
+| **API Model** | `claude-opus-5-5` (change with `CLAUDE_MODEL`) with the `web_search_20260209` tool |
 
 ---
 
@@ -55,11 +54,11 @@ The **Disaster Response AI Agent** is a full-stack AI application that combines:
 
 | Category | Tools |
 |---|---|
-| Language | Python 3.8+ |
+| Language | Python 3.10+ |
 | Web UI | Streamlit (responsive, light theme, 3D effects, animations) |
-| AI Model | Claude Sonnet 4 (Anthropic API) |
-| Web Search | Anthropic `web_search_20250305` tool |
-| API Layer | Python `requests` (direct Anthropic API calls) |
+| AI Model | Claude Opus 5.5 (Anthropic API), configurable |
+| Web Search | Anthropic `web_search_20260209` server tool |
+| API Layer | Official `anthropic` Python SDK |
 | Memory | Custom conversation history manager (`memory.py`) |
 | Deduplication | Custom disaster deduplication engine (`depuce.py`) |
 | Utilities | Custom severity analyzer, emergency contact system (`utils.py`) |
@@ -76,8 +75,8 @@ This project uses **live, real-time data** — not a static dataset:
 | Source | Type | Details |
 |---|---|---|
 | **Anthropic web search** | Live web results | Current disaster news, USGS earthquake feeds, weather alerts |
-| **Built-in fallback data** | Static templates | 7 disaster-specific safety protocols (earthquake, wildfire, flood, etc.) |
-| **Mock disaster tracker** | In-memory | Simulated active disaster tracking (Earthquake CA, Wildfire NSW) with lat/lng |
+| **Built-in fallback data** | Static templates | 6 keyword-triggered safety protocols (earthquake, wildfire, flood, etc.) plus a general response |
+| **Sample disaster tracker** | In-memory | Sample incidents (for example an earthquake in California and a wildfire in New South Wales) with lat/lng |
 | **Emergency contacts** | Static | 6-country emergency number database |
 
 ---
@@ -87,7 +86,7 @@ This project uses **live, real-time data** — not a static dataset:
 ```
 Disaster-Management-System/
 ├── main.py              # Streamlit UI — chat interface, map view, analytics dashboard
-├── tools.py             # Claude API integration + web search + fallback responses (360 lines)
+├── tools.py             # Claude API integration + web search + fallback responses
 ├── memory.py            # Conversation history management (session state)
 ├── utils.py             # Utility functions — input validation, formatting
 ├── depuce.py            # Disaster data deduplication engine
@@ -106,16 +105,16 @@ Disaster-Management-System/
 ```
 Step 1  → User opens Streamlit app → selects Chat / Map / Analytics tab
 Step 2  → User types natural language query ("What should I do during a flood?")
-Step 3  → tools.py sends message + conversation history to Claude Sonnet 4 API
-Step 4  → Claude decides: answer directly OR invoke web_search_20250305 tool
+Step 3  → tools.py sends message + conversation history to Claude through the Anthropic SDK
+Step 4  → Claude decides: answer directly OR use the web_search tool
 Step 5  → If web search: Claude fetches live disaster news/updates from the web
 Step 6  → Claude generates structured, safety-focused response
 Step 7  → memory.py appends exchange to session history (up to 100 messages)
 Step 8  → If API fails: generate_fallback_response() matches keywords → returns protocol
 Step 9  → depuce.py checks incoming disaster data for duplicates before adding to tracker
 Step 10 → analyze_disaster_severity() scores event → Critical/High/Medium/Low + recommendation
-Step 11 → Map view renders active disasters with coordinates and severity badges
-Step 12 → Analytics dashboard shows active count, response metrics, export report button
+Step 11 → Disaster tracker view lists incidents with coordinates and severity badges
+Step 12 → Analytics view shows active and monitored counts and response metrics
 ```
 
 ---
@@ -124,7 +123,7 @@ Step 12 → Analytics dashboard shows active count, response metrics, export rep
 
 | Choice | Reason |
 |---|---|
-| **Claude Sonnet 4** | Best-in-class reasoning for structured, safety-critical responses; supports tool use natively |
+| **Claude Opus 5.5** | Strong reasoning for structured, safety-critical responses; native tool use and server-side web search |
 | **web_search tool** | Real-time disaster information without managing external APIs separately |
 | **Streamlit** | Fastest path to a production-looking UI; no frontend code required |
 | **Custom memory.py** | Claude has no built-in session memory — manual history management is required for multi-turn conversations |
@@ -137,7 +136,7 @@ Step 12 → Analytics dashboard shows active count, response metrics, export rep
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Python 3.8+
+- Python 3.10+ (the dev container uses 3.11)
 - Anthropic API key ([get one here](https://console.anthropic.com))
 
 ### Quick Setup
@@ -212,7 +211,7 @@ This tool is for **information and coordination purposes only**. Always follow o
 
 **Mokshit Sharma**
 B.Tech + M.Tech (Dual Degree) — AI & Data Science | DAVV, Indore
-📧 sharman48520@gmail.com | 🌐 [mokshitsharma27.vercel.app](https://mokshitsharma27.vercel.app)
+📧 mokshitsharmalaptop@gmail.com | 🌐 [mokshitsharma27.vercel.app](https://mokshitsharma27.vercel.app)
 🔗 [LinkedIn](https://linkedin.com/in/mokshit-sharma-75b5ab305) | 💻 [GitHub](https://github.com/Mokshitsharma)
 
 ---

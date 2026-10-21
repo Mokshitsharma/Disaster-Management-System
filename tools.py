@@ -1,20 +1,16 @@
-import requests
-import json
+import os
 from datetime import datetime
 
-def call_claude_api(user_message, conversation_history):
-    """
-    Call CHATGPT API for disaster response assistance.
-    
-    Args:
-        user_message: The user's current message
-        conversation_history: List of previous messages
-    
-    Returns:
-        str: Claude's response
-    """
-    
-    system_prompt = """You are a Disaster Response AI Agent. Your role is to:
+import anthropic
+from dotenv import load_dotenv
+
+# The API key comes from the environment or a local .env file (see .env.example); it is never written in code.
+load_dotenv()
+
+# Claude Opus 5.5 by default; set CLAUDE_MODEL in .env to use another model.
+MODEL = os.getenv("CLAUDE_MODEL", "claude-opus-5-5")
+
+SYSTEM_PROMPT = """You are a Disaster Response AI Agent. Your role is to:
 
 1. Monitor and analyze disaster situations in real-time
 2. Provide emergency guidance and safety instructions
@@ -30,78 +26,60 @@ Be clear, actionable, and prioritize safety. Use structured responses when appro
 Always remain calm and professional in emergencies. Provide specific, step-by-step 
 instructions when dealing with emergency situations."""
 
-    try:
-        # Prepare the API request
-        url = "https://api.openai.com/v1/chat/completions"
 
-        
-        headers = {
-            "Content-Type": "application/json",
-            "x-api-key": "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"  # User should replace this
-        }
-        
-        # Build conversation history
-        messages = []
-        for msg in conversation_history:
-            messages.append({
-                "role": msg['role'],
-                "content": msg['content']
-            })
-        
-        # Add current message if not in history
-        if not messages or messages[-1]['content'] != user_message:
-            messages.append({
-                "role": "user",
-                "content": user_message
-            })
-        
-        payload = {
-            "model": "claude-sonnet-4-20250514",
-            "max_tokens": 2000,
-            "system": system_prompt,
-            "messages": messages,
-            "tools": [{
-                "type": "web_search_20250305",
-                "name": "web_search"
-            }]
-        }
-        
-        # Make the API call
-        response = requests.post(url, headers=headers, json=payload, timeout=30)
-        
-        if response.status_code == 200:
-            data = response.json()
-            
-            # Extract text content from response
-            assistant_message = ""
-            tool_uses = []
-            
-            for block in data.get('content', []):
-                if block.get('type') == 'text':
-                    assistant_message += block.get('text', '')
-                elif block.get('type') == 'tool_use':
-                    tool_uses.append(block)
-            
-            # If Claude used web search, handle tool results
-            if tool_uses and data.get('stop_reason') == 'tool_use':
-                # In a production app, you would handle tool results here
-                # For now, we'll just return the partial response
-                pass
-            
-            return assistant_message if assistant_message else "I'm here to help with disaster response. How can I assist you?"
-        
-        else:
-            return f"⚠️ API Error: {response.status_code}. Using fallback response system."
-    
-    except requests.exceptions.Timeout:
-        return "⚠️ Request timed out. Please try again or contact emergency services directly if this is urgent."
-    
-    except requests.exceptions.RequestException as e:
-        return f"⚠️ Connection error. Please check your internet connection. For immediate emergencies, call 911."
-    
-    except Exception as e:
-        # Fallback response system
+def call_claude_api(user_message, conversation_history):
+    """
+    Call Claude for disaster response assistance, with Anthropic's server-side web search.
+
+    Args:
+        user_message: The user's current message
+        conversation_history: List of previous messages ({"role", "content"})
+
+    Returns:
+        str: Claude's response, or a built-in safety protocol if the API is unavailable
+    """
+    if not os.getenv("ANTHROPIC_API_KEY"):
         return generate_fallback_response(user_message)
+
+    messages = [{"role": m["role"], "content": m["content"]} for m in conversation_history]
+    if not messages or messages[-1]["content"] != user_message:
+        messages.append({"role": "user", "content": user_message})
+
+    client = anthropic.Anthropic(timeout=120.0)
+    parts = []
+    try:
+        # Web search runs on Anthropic's side. A long search can pause the turn (stop_reason "pause_turn");
+        # sending the partial answer back lets Claude continue where it stopped.
+        for _ in range(3):
+            response = client.beta.messages.create(
+                model=MODEL,
+                max_tokens=16000,
+                system=SYSTEM_PROMPT,
+                messages=messages,
+                tools=[{"type": "web_search_20260209", "name": "web_search", "max_uses": 5}],
+                output_config={"effort": "medium"},
+                # If a safety classifier declines the request, the API retries it on a fallback model.
+                betas=["server-side-fallback-2026-07-01"],
+                fallbacks="default",
+            )
+            parts += [block.text for block in response.content if block.type == "text"]
+            if response.stop_reason != "pause_turn":
+                break
+            messages.append({"role": "assistant", "content": response.content})
+    except anthropic.AuthenticationError:
+        return "⚠️ The Anthropic API key was rejected. Check ANTHROPIC_API_KEY in your .env file."
+    except anthropic.RateLimitError:
+        return "⚠️ Too many requests right now. Please try again in a minute.\n\n" + generate_fallback_response(user_message)
+    except anthropic.APIConnectionError:
+        return "⚠️ Connection error. Please check your internet connection. For immediate emergencies, call your local emergency number.\n\n" + generate_fallback_response(user_message)
+    except anthropic.APIStatusError:
+        return generate_fallback_response(user_message)
+
+    if response.stop_reason == "refusal":
+        return generate_fallback_response(user_message)
+
+    text = "".join(parts)
+    return text or "I'm here to help with disaster response. How can I assist you?"
 
 
 def generate_fallback_response(user_message):

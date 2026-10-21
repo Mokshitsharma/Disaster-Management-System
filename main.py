@@ -1,7 +1,7 @@
 import streamlit as st
 import time
 from datetime import datetime
-from tools import call_claude_api, search_disasters, get_emergency_contacts
+from tools import MODEL, call_claude_api, search_disasters, get_emergency_contacts
 from memory import ConversationMemory
 from utils import format_message, get_disaster_stats, load_mock_disasters
 import json
@@ -462,7 +462,7 @@ else:  # Settings
     
     st.markdown("### 🤖 AI Settings")
     response_speed = st.slider("Response Speed", 0, 100, 75)
-    st.selectbox("AI Model", ["Claude Sonnet 4 (Current)", "Claude Opus 4"])
+    st.text_input("AI Model", value=MODEL, disabled=True, help="Set CLAUDE_MODEL in your .env file to change it.")
     
     st.markdown("### 🌍 Location")
     st.text_input("Your Location", placeholder="Enter city or coordinates")
